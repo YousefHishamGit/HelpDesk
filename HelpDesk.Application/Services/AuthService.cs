@@ -55,24 +55,22 @@ namespace HelpDesk.Application.Services
             };
         }
 
-        public async Task<LoginResponseDto> LoginAsync(LoginRequestDto dto)
+        public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto)
         {
-            var user =await _userRepo.GetByEmailAsync(dto.Email);
+            var user = await _userRepo.GetByEmailAsync(dto.Email);
             if (user == null)
             {
-                //throw new UnauthorizedAccessException("Invalid email or password.");
                 return null;
             }
-            if(!user.IsActive)
+            if (!user.IsActive)
             {
-                //throw new UnauthorizedAccessException("User account is deactivated.");
                 return null;
             }
             //check pass
             var verifyPass = _passHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
             if (verifyPass == PasswordVerificationResult.Failed)
             {
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                return null;
             }
             //Generate JWT
             var accessToken = _jwtTokenService.GenerateAccessToken(user);

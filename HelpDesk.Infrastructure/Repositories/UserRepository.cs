@@ -37,9 +37,19 @@ namespace HelpDesk.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
         }
 
-        async Task IUserRepository.SaveChangesAsync()
+         async Task IUserRepository.SaveChangesAsync()
         {
            await _dbContext.SaveChangesAsync();
+        }
+
+        public IQueryable<User> GetAllAsync()
+        {
+            return _dbContext.Users.AsNoTracking();
+        }
+
+        async Task<User?> IUserRepository.GetByIdAsync(int id)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u=>u.Id == id);
         }
     }
 }
