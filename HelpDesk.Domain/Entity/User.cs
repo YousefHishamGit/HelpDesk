@@ -22,5 +22,8 @@ namespace HelpDesk.Domain.Entity
         public bool IsActive { get; set; } = true;
 
         public ICollection<RefreshToken> RefreshTokens { get; set; }
+
+        public ICollection<Ticket> CreatedTickets { get; set; } 
+        public ICollection<Ticket> AssignedTickets { get; set; } 
     }
 }

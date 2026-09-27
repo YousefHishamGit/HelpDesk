@@ -13,6 +13,7 @@ namespace HelpDesk.Application.Interfaces.Repositories
         Task<User?> GetByEmailAsync(string email);
         Task<User?> GetByRefreshTokenAsync(string refreshToken);
         IQueryable<User> GetAllAsync();
+        Task<User?> GetAgentByIdAsync(int agentId);
         Task AddAsync(User user);
         Task UpdateAsync(User user);
         Task SaveChangesAsync();

@@ -1,5 +1,6 @@
 ﻿using HelpDesk.Application.Interfaces.Repositories;
 using HelpDesk.Domain.Entity;
+using HelpDesk.Domain.Enums;
 using HelpDesk.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -50,6 +51,15 @@ namespace HelpDesk.Infrastructure.Repositories
         async Task<User?> IUserRepository.GetByIdAsync(int id)
         {
             return await _dbContext.Users.FirstOrDefaultAsync(u=>u.Id == id);
+        }
+
+        public async Task<User?> GetAgentByIdAsync(int agentId)
+        {
+            return await _dbContext.Users
+                .FirstOrDefaultAsync(u =>
+                    u.Id == agentId &&
+                    u.Role == UserRole.Agent &&
+                    u.IsActive);
         }
     }
 }
