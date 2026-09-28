@@ -22,6 +22,11 @@ namespace HelpDesk.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Role).HasConversion<string>();
             builder.Property(u => u.IsActive).IsRequired().HasDefaultValue(true);
 
+            builder.HasMany(u => u.TicketComments)
+                            .WithOne(c => c.User)
+                            .HasForeignKey(c => c.UserId)
+                            .OnDelete(DeleteBehavior.Restrict);
+
 
 
 

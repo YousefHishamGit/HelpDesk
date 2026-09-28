@@ -78,9 +78,9 @@ namespace HelpDesk.Infrastructure.Repositories
             return await _dbContext.Ticket.FirstOrDefaultAsync(t => t.Id == ticketId);
         }
 
-        async Task ITicketRepository.UpdateAsync(Ticket ticket)
+       public async Task UpdateAsync(Ticket ticket)
         {
-           await _dbContext.SaveChangesAsync();
+             _dbContext.Ticket.Update(ticket);
         }
     }
 }

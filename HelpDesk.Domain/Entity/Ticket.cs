@@ -30,5 +30,8 @@ namespace HelpDesk.Domain.Entity
 
         public int? AssignedToId { get; set; }
         public User? AssignedTo { get; set; }
+
+
+        public ICollection<TicketComment> Comments { get; set; }= new List<TicketComment>();
     }
 }

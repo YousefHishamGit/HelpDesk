@@ -72,7 +72,7 @@ namespace HelpDesk.Application.Services
        public async Task<TicketDetailsDto?> GetByIdAsync(int ticketId, int currentUserId, UserRole currentUserRole)
         {
             var ticket = await _ticketRepo.GetByIdAsync(ticketId);
-            if (ticket is null) throw new ArgumentNullException(nameof(ticket));
+            if (ticket is null) throw new KeyNotFoundException("ticket not Found");
 
             if (currentUserRole == UserRole.Employee && ticket.CreatedById != currentUserId)
             {
@@ -265,6 +265,86 @@ namespace HelpDesk.Application.Services
 
             
             return await GetByIdAsync( ticket.Id, 0,  UserRole.Admin);
+        }
+
+        public async Task<TicketDetailsDto> StartTicketAsync(int ticketId,int currentUserId)
+        {
+            var ticket = await _ticketRepo.GetByIdForUpdateAsync(ticketId);
+
+            if (ticket == null)
+                throw new KeyNotFoundException("Ticket not found.");
+
+           
+            if (ticket.AssignedToId != currentUserId)
+                throw new UnauthorizedAccessException(
+                    "You are not assigned to this ticket.");
+
+           
+            if (ticket.Status != TicketStatus.Assigned)
+                throw new InvalidOperationException(
+                    "Only assigned tickets can be started.");
+
+            ticket.Status = TicketStatus.InProgress;
+            ticket.UpdatedAt = DateTime.UtcNow;
+
+            await _ticketRepo.UpdateAsync(ticket);
+            await _ticketRepo.SaveChangesAsync();
+
+            return await GetByIdAsync( ticket.Id,currentUserId, UserRole.Agent);
+        }
+
+
+        public async Task<TicketDetailsDto> ResolveTicketAsync(int ticketId, int currentUserId)
+        {
+            var ticket = await _ticketRepo
+                .GetByIdForUpdateAsync(ticketId);
+
+            if (ticket == null)
+                throw new KeyNotFoundException("Ticket not found.");
+
+            if (ticket.AssignedToId != currentUserId)
+                throw new UnauthorizedAccessException(
+                    "You are not assigned to this ticket.");
+
+            if (ticket.Status != TicketStatus.InProgress)
+                throw new InvalidOperationException(
+                    "Only in-progress tickets can be resolved.");
+
+            ticket.Status = TicketStatus.Resolved;
+            ticket.ResolvedAt = DateTime.UtcNow;
+            ticket.UpdatedAt = DateTime.UtcNow;
+
+            await _ticketRepo.UpdateAsync(ticket);
+            await _ticketRepo.SaveChangesAsync();
+
+            return await GetByIdAsync( ticket.Id,currentUserId, UserRole.Agent);
+        }
+
+        public async Task<TicketDetailsDto> CloseTicketAsync(int ticketId, int currentUserId, UserRole currentUserRole)
+        {
+            var ticket = await _ticketRepo.GetByIdForUpdateAsync(ticketId);
+
+            if (ticket == null)
+                throw new KeyNotFoundException("Ticket not found.");
+
+            bool isOwner = ticket.CreatedById == currentUserId;
+            bool isAdmin = currentUserRole == UserRole.Admin;
+            if (!isOwner && !isAdmin)
+            {
+                throw new UnauthorizedAccessException("Only the employee who created the ticket or an admin can close it.");
+            }
+
+            if (ticket.Status != TicketStatus.Resolved)
+                throw new InvalidOperationException("Only resolved tickets can be closed.");
+
+            ticket.Status = TicketStatus.Closed;
+            ticket.ClosedAt = DateTime.UtcNow;
+            ticket.UpdatedAt = DateTime.UtcNow;
+
+            await _ticketRepo.UpdateAsync(ticket);
+            await _ticketRepo.SaveChangesAsync();
+
+            return await GetByIdAsync(ticket.Id, currentUserId, currentUserRole);
         }
     }
 }

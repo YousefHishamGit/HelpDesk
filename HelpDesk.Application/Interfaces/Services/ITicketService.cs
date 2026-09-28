@@ -18,5 +18,8 @@ namespace HelpDesk.Application.Interfaces.Services
         Task<PagedResultDto<TicketDetailsDto>> GetAllTicketsAsync(TicketQueryParametersDto? parameters = null);
         Task<TicketDetailsDto> AssignTicketAsync(int ticketId, AssignTicketRequestDto dto);
         Task<TicketDetailsDto> UnassignTicketAsync(int ticketId);
+        Task<TicketDetailsDto> StartTicketAsync(int ticketId,int currentUserId);
+        Task<TicketDetailsDto> ResolveTicketAsync(int ticketId,int currentUserId);
+        Task<TicketDetailsDto> CloseTicketAsync(int ticketId, int currentUserId, UserRole currentUserRole);
     }
 }

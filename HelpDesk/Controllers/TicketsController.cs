@@ -1,5 +1,6 @@
 using HelpDesk.Application.DTOs.Tickets;
 using HelpDesk.Application.Interfaces.Services;
+using HelpDesk.Application.Services;
 using HelpDesk.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,9 +14,11 @@ namespace HelpDesk.Controllers
     public class TicketsController : ControllerBase
     {
         private readonly ITicketService _ticketService;
-        public TicketsController(ITicketService ticketService)
+        private readonly ITicketCommentService _ticketCommentService;
+        public TicketsController(ITicketService ticketService, ITicketCommentService ticketCommentService)
         {
             _ticketService = ticketService;
+            _ticketCommentService = ticketCommentService;
         }
 
         [Authorize(Roles = "Employee")]
@@ -112,6 +115,113 @@ namespace HelpDesk.Controllers
         {
             var result = await _ticketService.UnassignTicketAsync(id);
             return Ok(result);
+        }
+
+        [Authorize(Roles = "Agent")]
+        [HttpPut("{id}/start")]
+        public async Task<IActionResult> StartTicket(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            var result = await _ticketService.StartTicketAsync(id, userId);
+
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Agent")]
+        [HttpPut("{id}/resolve")]
+        public async Task<IActionResult> ResolveTicket(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            var result = await _ticketService
+                .ResolveTicketAsync(id, userId);
+
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Employee,Admin")]
+        [HttpPut("{id}/close")]
+        public async Task<IActionResult> CloseTicket(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || string.IsNullOrEmpty(userRole))
+                return Unauthorized();
+
+            if (!int.TryParse(userIdClaim, out int userId) || !Enum.TryParse<UserRole>(userRole, true, out var parsedRole))
+                return BadRequest(new { message = "Invalid user token claims." });
+
+            try
+            {
+                var result = await _ticketService.CloseTicketAsync(id, userId, parsedRole);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [Authorize]
+        [HttpPost("{ticketId}/comments")]
+        public async Task<IActionResult> AddComment(int ticketId,CreateTicketCommentDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            var roleClaim = User.FindFirst(ClaimTypes.Role);
+
+            if (roleClaim == null)
+                return Unauthorized();
+
+            var userId = int.Parse(userIdClaim.Value);
+            var role = Enum.Parse<UserRole>(roleClaim.Value);
+
+            var result = await _ticketCommentService.AddCommentAsync(ticketId, userId,role, dto);
+
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpGet("{ticketId}/comments")]
+        public async Task<IActionResult> GetComments(int ticketId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            var roleClaim = User.FindFirst(ClaimTypes.Role);
+
+            if (roleClaim == null)
+                return Unauthorized();
+
+            var userId = int.Parse(userIdClaim.Value);
+            var role = Enum.Parse<UserRole>(roleClaim.Value);
+
+            var comments = await _ticketCommentService.GetCommentsAsync(ticketId, userId, role);
+
+            return Ok(comments);
         }
     }
 }

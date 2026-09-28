@@ -24,6 +24,7 @@ namespace HelpDesk.Domain.Entity
         public ICollection<RefreshToken> RefreshTokens { get; set; }
 
         public ICollection<Ticket> CreatedTickets { get; set; } 
-        public ICollection<Ticket> AssignedTickets { get; set; } 
+        public ICollection<Ticket> AssignedTickets { get; set; }
+        public ICollection<TicketComment> TicketComments { get; set; }= new List<TicketComment>();
     }
 }

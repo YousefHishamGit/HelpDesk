@@ -53,6 +53,11 @@ namespace HelpDesk.Infrastructure.Persistence.Configurations
             .WithMany(u => u.AssignedTickets)
             .HasForeignKey(t => t.AssignedToId)
             .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasMany(t => t.Comments)
+                    .WithOne(c => c.Ticket)
+                    .HasForeignKey(c => c.TicketId)
+                    .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

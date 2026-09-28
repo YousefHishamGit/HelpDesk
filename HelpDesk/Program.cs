@@ -31,6 +31,8 @@ namespace HelpDesk
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ITicketRepository, TicketRepository>();
             builder.Services.AddScoped<ITicketService, TicketService>();
+            builder.Services.AddScoped<ITicketCommentRepository, TicketCommentRepository>();
+            builder.Services.AddScoped<ITicketCommentService, TicketCommentService>();
 
 
 
@@ -43,27 +45,26 @@ namespace HelpDesk
 
 
 
-            builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                            .AddJwtBearer(options =>
+                            {
+                                options.TokenValidationParameters = new TokenValidationParameters
+                                {
+                                    ValidateIssuer = true,
+                                    ValidateAudience = true,
+                                    ValidateLifetime = true,
+                                    ValidateIssuerSigningKey = true,
 
-            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+                                    ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+                                    ValidAudience = builder.Configuration["JwtSettings:Audience"],
 
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:SecretKey"]!
-                )
-            )
-        };
-    });
+                                    IssuerSigningKey = new SymmetricSecurityKey(
+                                        Encoding.UTF8.GetBytes(
+                                            builder.Configuration["Jwt:SecretKey"]!
+                                        )
+                                    )
+                                };
+                            });
 
             builder.Services.AddAuthorization();
 
@@ -80,7 +81,6 @@ namespace HelpDesk
 
             app.UseHttpsRedirection();
             app.UseAuthentication();
-
             app.UseAuthorization();
 
 

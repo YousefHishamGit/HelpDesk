@@ -15,6 +15,7 @@ namespace HelpDesk.Infrastructure.Persistence
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Ticket> Ticket { get; set; }
+        public DbSet<TicketComment> TicketComments { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { 
 
         }
