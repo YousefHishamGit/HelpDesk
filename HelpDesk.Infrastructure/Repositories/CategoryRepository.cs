@@ -1,11 +1,8 @@
-﻿using HelpDesk.Application.Interfaces.Repositories;
+using HelpDesk.Application.Interfaces.Repositories;
 using HelpDesk.Domain.Entity;
 using HelpDesk.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace HelpDesk.Infrastructure.Repositories
@@ -22,6 +19,13 @@ namespace HelpDesk.Infrastructure.Repositories
         public async Task<Category?> GetByIdAsync(int id)
         {
             return await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+        public async Task<List<Category>> GetAllAsync()
+        {
+            return await _context.Categories
+                .AsNoTracking()
+                .ToListAsync();
         }
     }
 }

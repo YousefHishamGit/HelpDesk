@@ -1,4 +1,4 @@
-using HelpDesk.Application.DTOs.Common;
+﻿using HelpDesk.Application.DTOs.Common;
 using HelpDesk.Application.DTOs.Tickets;
 using HelpDesk.Application.Interfaces.Repositories;
 using HelpDesk.Application.Interfaces.Services;
@@ -87,11 +87,11 @@ namespace HelpDesk.Application.Services
                 Id = ticket.Id,
                 Title = ticket.Title,
                 Description = ticket.Description,
-                CategoryName = ticket.Category.Name,
+                CategoryName = ticket.Category != null ? ticket.Category.Name : "General",
                 Priority = ticket.Priority,
                 Status = ticket.Status,
                 CreatedById = ticket.CreatedById,
-                CreatedByName = ticket.CreatedBy.FullName,
+                CreatedByName = ticket.CreatedBy != null ? ticket.CreatedBy.FullName : "Unknown",
                 AssignedToId = ticket.AssignedToId,
                 AssignedToName = ticket.AssignedTo?.FullName,
                 CreatedAt = ticket.CreatedAt,
@@ -110,7 +110,7 @@ namespace HelpDesk.Application.Services
                 Id = t.Id,
                 Title = t.Title,
                 Description = t.Description,
-                CategoryName = t.Category.Name,
+                CategoryName = t.Category != null ? t.Category.Name : "General",
                 Priority = t.Priority,
                 Status = t.Status,
 
@@ -189,27 +189,30 @@ namespace HelpDesk.Application.Services
             var totalCount = await query.CountAsync();
 
             var tickets = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .Select(t => new TicketDetailsDto
-                {
-                    Id             = t.Id,
-                    Title          = t.Title,
-                    Description    = t.Description,
-                    CategoryName   = t.Category.Name,
-                    Priority       = t.Priority,
-                    Status         = t.Status,
-                    CreatedById    = t.CreatedById,
-                    CreatedByName  = t.CreatedBy.FullName,
-                    AssignedToId   = t.AssignedToId,
-                    AssignedToName = t.AssignedTo != null ? t.AssignedTo.FullName : null,
-                    CreatedAt      = t.CreatedAt,
-                    UpdatedAt      = t.UpdatedAt,
-                    DueAt          = t.DueAt,
-                    ResolvedAt     = t.ResolvedAt,
-                    ClosedAt       = t.ClosedAt
-                })
-                .ToListAsync();
+    .AsNoTracking()
+    .OrderByDescending(t => t.CreatedAt)
+    .ThenBy(t => t.Id)   
+    .Skip((pageNumber - 1) * pageSize)
+    .Take(pageSize)
+    .Select(t => new TicketDetailsDto
+    {
+        Id = t.Id,
+        Title = t.Title,
+        Description = t.Description,
+        CategoryName = t.Category != null ? t.Category.Name : "General",
+        Priority = t.Priority,
+        Status = t.Status,
+        CreatedById = t.CreatedById,
+        CreatedByName = t.CreatedBy != null ? t.CreatedBy.FullName : "Unknown",
+        AssignedToId = t.AssignedToId,
+        AssignedToName = t.AssignedTo != null ? t.AssignedTo.FullName : null,
+        CreatedAt = t.CreatedAt,
+        UpdatedAt = t.UpdatedAt,
+        DueAt = t.DueAt,
+        ResolvedAt = t.ResolvedAt,
+        ClosedAt = t.ClosedAt
+    })
+    .ToListAsync();
 
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
@@ -348,3 +351,4 @@ namespace HelpDesk.Application.Services
         }
     }
 }
+

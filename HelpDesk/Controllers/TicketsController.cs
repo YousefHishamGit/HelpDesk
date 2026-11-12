@@ -1,4 +1,4 @@
-using HelpDesk.Application.DTOs.Tickets;
+﻿ using HelpDesk.Application.DTOs.Tickets;
 using HelpDesk.Application.Interfaces.Services;
 using HelpDesk.Application.Services;
 using HelpDesk.Domain.Enums;
@@ -21,51 +21,53 @@ namespace HelpDesk.Controllers
             _ticketCommentService = ticketCommentService;
         }
 
-        [Authorize(Roles = "Employee")]
+        private int? GetCurrentUserId()
+        {
+            var val = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                   ?? User.FindFirst("sub")?.Value
+                   ?? User.FindFirst("nameid")?.Value
+                   ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+            return int.TryParse(val, out var id) ? id : null;
+        }
+
+        private UserRole? GetCurrentUserRole()
+        {
+            var roleStr = User.FindFirst(ClaimTypes.Role)?.Value
+                       ?? User.FindFirst("role")?.Value
+                       ?? User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            return Enum.TryParse<UserRole>(roleStr, true, out var r) ? r : null;
+        }
+
+        [Authorize(Roles = "Employee,Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateTicket([FromBody] CreateTicketRequestDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                           ?? User.FindFirst("sub")?.Value
-                           ?? User.FindFirst("nameid")?.Value;
-
-            if (!int.TryParse(userIdClaim, out var currentUserId))
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
             {
                 return Unauthorized(new { message = "Invalid or missing user ID in token." });
             }
 
-            try
-            {
-                var result = await _ticketService.CreateTicketAsync(currentUserId, dto);
-                return StatusCode(StatusCodes.Status201Created, result);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _ticketService.CreateTicketAsync(currentUserId.Value, dto);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserId = GetCurrentUserId();
+            var currentUserRole = GetCurrentUserRole();
 
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            if (!Enum.TryParse<UserRole>(role, true, out var currentUserRole))
+            if (!currentUserId.HasValue || !currentUserRole.HasValue)
             {
-                return Forbid();
+                return Unauthorized(new { message = "Invalid or missing user credentials in token." });
             }
 
             var result = await _ticketService.GetByIdAsync(
                 id,
-                currentUserId,
-                currentUserRole);
+                currentUserId.Value,
+                currentUserRole.Value);
 
             return Ok(result);
         }
@@ -74,21 +76,15 @@ namespace HelpDesk.Controllers
         [HttpGet("my")]
         public async Task<IActionResult> GetMyTickets()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var currentUserId = GetCurrentUserId();
+            var currentUserRole = GetCurrentUserRole();
 
-            if (userIdClaim == null)
-                return Unauthorized();
+            if (!currentUserId.HasValue || !currentUserRole.HasValue)
+            {
+                return Unauthorized(new { message = "Invalid or missing user credentials in token." });
+            }
 
-            var userId = int.Parse(userIdClaim.Value);
-
-            var roleClaim = User.FindFirst(ClaimTypes.Role);
-
-            if (roleClaim == null)
-                return Unauthorized();
-
-            var role = Enum.Parse<UserRole>(roleClaim.Value);
-
-            var tickets = await _ticketService.GetMyTicketsAsync(userId, role);
+            var tickets = await _ticketService.GetMyTicketsAsync(currentUserId.Value, currentUserRole.Value);
 
             return Ok(tickets);
         }
@@ -103,7 +99,7 @@ namespace HelpDesk.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}/assign")]
-        public async Task<IActionResult> AssignTicket(int id,AssignTicketRequestDto dto)
+        public async Task<IActionResult> AssignTicket(int id, AssignTicketRequestDto dto)
         {
             var result = await _ticketService.AssignTicketAsync(id, dto);
             return Ok(result);
@@ -121,15 +117,13 @@ namespace HelpDesk.Controllers
         [HttpPut("{id}/start")]
         public async Task<IActionResult> StartTicket(int id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized(new { message = "Invalid or missing user ID in token." });
+            }
 
-            if (userIdClaim == null)
-                return Unauthorized();
-
-            var userId = int.Parse(userIdClaim.Value);
-
-            var result = await _ticketService.StartTicketAsync(id, userId);
-
+            var result = await _ticketService.StartTicketAsync(id, currentUserId.Value);
             return Ok(result);
         }
 
@@ -137,16 +131,13 @@ namespace HelpDesk.Controllers
         [HttpPut("{id}/resolve")]
         public async Task<IActionResult> ResolveTicket(int id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized(new { message = "Invalid or missing user ID in token." });
+            }
 
-            if (userIdClaim == null)
-                return Unauthorized();
-
-            var userId = int.Parse(userIdClaim.Value);
-
-            var result = await _ticketService
-                .ResolveTicketAsync(id, userId);
-
+            var result = await _ticketService.ResolveTicketAsync(id, currentUserId.Value);
             return Ok(result);
         }
 
@@ -154,51 +145,31 @@ namespace HelpDesk.Controllers
         [HttpPut("{id}/close")]
         public async Task<IActionResult> CloseTicket(int id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || string.IsNullOrEmpty(userRole))
-                return Unauthorized();
+            var currentUserId = GetCurrentUserId();
+            var currentUserRole = GetCurrentUserRole();
 
-            if (!int.TryParse(userIdClaim, out int userId) || !Enum.TryParse<UserRole>(userRole, true, out var parsedRole))
-                return BadRequest(new { message = "Invalid user token claims." });
+            if (!currentUserId.HasValue || !currentUserRole.HasValue)
+            {
+                return Unauthorized(new { message = "Invalid user token claims." });
+            }
 
-            try
-            {
-                var result = await _ticketService.CloseTicketAsync(id, userId, parsedRole);
-                return Ok(result);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _ticketService.CloseTicketAsync(id, currentUserId.Value, currentUserRole.Value);
+            return Ok(result);
         }
+
         [Authorize]
         [HttpPost("{ticketId}/comments")]
-        public async Task<IActionResult> AddComment(int ticketId,CreateTicketCommentDto dto)
+        public async Task<IActionResult> AddComment(int ticketId, CreateTicketCommentDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var currentUserId = GetCurrentUserId();
+            var currentUserRole = GetCurrentUserRole();
 
-            if (userIdClaim == null)
-                return Unauthorized();
+            if (!currentUserId.HasValue || !currentUserRole.HasValue)
+            {
+                return Unauthorized(new { message = "Invalid or missing user credentials in token." });
+            }
 
-            var roleClaim = User.FindFirst(ClaimTypes.Role);
-
-            if (roleClaim == null)
-                return Unauthorized();
-
-            var userId = int.Parse(userIdClaim.Value);
-            var role = Enum.Parse<UserRole>(roleClaim.Value);
-
-            var result = await _ticketCommentService.AddCommentAsync(ticketId, userId,role, dto);
-
+            var result = await _ticketCommentService.AddCommentAsync(ticketId, currentUserId.Value, currentUserRole.Value, dto);
             return Ok(result);
         }
 
@@ -206,21 +177,15 @@ namespace HelpDesk.Controllers
         [HttpGet("{ticketId}/comments")]
         public async Task<IActionResult> GetComments(int ticketId)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var currentUserId = GetCurrentUserId();
+            var currentUserRole = GetCurrentUserRole();
 
-            if (userIdClaim == null)
-                return Unauthorized();
+            if (!currentUserId.HasValue || !currentUserRole.HasValue)
+            {
+                return Unauthorized(new { message = "Invalid or missing user credentials in token." });
+            }
 
-            var roleClaim = User.FindFirst(ClaimTypes.Role);
-
-            if (roleClaim == null)
-                return Unauthorized();
-
-            var userId = int.Parse(userIdClaim.Value);
-            var role = Enum.Parse<UserRole>(roleClaim.Value);
-
-            var comments = await _ticketCommentService.GetCommentsAsync(ticketId, userId, role);
-
+            var comments = await _ticketCommentService.GetCommentsAsync(ticketId, currentUserId.Value, currentUserRole.Value);
             return Ok(comments);
         }
     }

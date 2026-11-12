@@ -54,7 +54,7 @@ namespace HelpDesk.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Category", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("HelpDesk.Domain.Entity.RefreshToken", b =>

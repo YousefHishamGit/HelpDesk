@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,5 +15,7 @@ namespace HelpDesk.Application.DTOs.Users
         public string Role { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
+
+
     }
 }

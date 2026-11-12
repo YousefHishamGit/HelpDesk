@@ -13,7 +13,6 @@ namespace HelpDesk.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<Category> builder)
         {
-            builder.ToTable("Category");
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Name)
             .IsRequired()
